@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;800&family=Prompt:wght@300;400;500;700&family=Mitr:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div>
+                <button class="back-btn" (click)="back()">กลับ</button>
+            </div>
+            <div class="logo">
+                <h1>RevMSU</h1>
+            </div>
+        </nav>
+    </header>
+    <main>
+        <div class="content">
+            <div class="card">
+                <div class="title">
+                    <h2>เข้าสู่ระบบ</h2>
+                </div>
+                
+                <div class="email-border">
+                    <input type="email" placeholder="อีเมล" [(ngModel)]="email">
+                </div>
+                
+                <div class="password-border">
+                    <input type="password" placeholder="รหัสผ่าน" [(ngModel)]="password">
+                </div>
+                
+                <div class="reset-password">
+                    <span>ลืมรหัสผ่าน?</span>
+                </div>
+
+                <div class="recaptcha-container">
+                    <div id="recaptcha-container"></div>
+                </div>
+
+                <button class="login-btn" (click)="login()">เข้าสู่ระบบ</button>
+
+                <div class="divider">
+                    <span>หรือ</span>
+                </div>
+
+                <button class="login-with-google" (click)="googleLogin()">
+                    เข้าสู่ระบบด้วย 
+                    <img src="/assets/images/google.png" alt="Google logo">
+                </button>
+
+                <div class="create-new">
+                    <span>ยังไม่มีบัญชี? <a href="/register">สมัครสมาชิก</a></span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Kanit', sans-serif;
+        }
+
+        body {
+            width: 85%;
+            max-width: 1096px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+        }
+
+        /* --- Header Section --- */
+        .container {
+            width: 100%;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            height: 4rem;
+        }
+        .back-btn {
+            background-color: black;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            /* เพิ่ม flex-shrink: 0 เพื่อป้องกันปุ่มบี้เมื่อจอเล็กมากๆ */
+            flex-shrink: 0; 
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .divider {
+            border: 0;
+            border-top: 2px solid #000;
+            margin-bottom: 30px;
+        }
+
+        .select-text {
+                      font-size: 1.8rem;
+            font-weight: 800;
+            text-align: center;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        /* --- Search Bar Fixed Version --- */
+        .search-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 40px auto;
+            /* ใช้ Flexbox จัดการโครงสร้าง */
+            display: flex;
+            align-items: stretch; /* ให้ลูกสูงเท่ากัน */
+            border: 2px solid #000;
+            border-radius: 12px; /* เปลี่ยนเป็นเหลี่ยมโค้งตามรูปใหม่ */
+            overflow: hidden; 
+            background: white;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            padding: 12px 15px;
+            font-size: 18px;
+            outline: none;
+            width: 100%;
+        }
+
+        .search-button {
+            background-color: #000;
+            color: white;
+            border: none;
+            padding: 0 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap; /* กันข้อความ "ค้นหา" ตกบรรทัด */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-button:hover {
+            background-color: #333;
+        }
+
+        /* --- Subject List --- */
+        .subject-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .subject-card {
+            width: 90%;
+            margin: 0 auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 2.5rem 40px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 30px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+                        color: #555;
+        }
+
+        .subject-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid black;
+            color: black;
+            cursor: pointer;
+            transform: translateY(-2px);
+        }
+
+        .subject-code {
+            font-weight: 600;
+            font-size: clamp(20px, 2vw, 28px);
+            min-width: 120px;
+        }
+
+        .subject-name {
+            font-size: clamp(16px, 1.8vw, 22px);
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- Responsive Fix --- */
+        @media (max-width: 480px) {
+            body { width: 92%; }
+            
+            /* .header { margin-bottom: 20px; } */
+            .title { display: none; }
+
+            /* ปรับแต่ง Search Bar ในมือถือ */
+            .search-container {
+                max-width: 95%;
+                border-radius: 8px;
+            }
+            .search-input {
+                padding: 10px;
+                font-size: 16px;
+            }
+            .search-button {
+                padding: 0 15px;
+                font-size: 14px;
+            }
+
+            /* ปรับแต่ง Card ในมือถือ */
+            .subject-card {
+                padding: 2rem;
+                justify-content: center; /* ตามรูปที่แนบมา ตัวเลขอยู่กลาง */
+            }
+            .subject-name {
+                display: none; /* ซ่อนชื่อวิชาในจอเล็กตามรูปที่แนบมา */
+            }
+            .subject-code {
+                min-width: unset;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <button class="back-btn" (click)="back()">กลับ</button>
+            <span class="title">Subject Details</span>
+        </header>
+
+        <hr class="divider">
+
+        <div class="select-text">เลือกวิชาที่ต้องการแก้ไข</div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="กรอกรหัสรายวิชา...">
+            <button class="search-button">ค้นหา</button>
+        </div>
+
+        <main class="subject-list">
+            <div class="subject-card" *ngFor="let subject of subjects" (click)="details()">
+                <span class="subject-code">0041001</span>
+                <span class="subject-name">ภาษาอังกฤษเพื่อการสื่อสารระดับสากลและนวัตกรรมทางภาษา</span>
+            </div>
+            
+        </main>
+    </div>
+
+</body>
+</html>
