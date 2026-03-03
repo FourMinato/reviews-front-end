@@ -309,10 +309,18 @@
                         <input type="email" class="form-input" [(ngModel)]="userData.email" readonly>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">รหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)</label>
-                        <input type="password" class="form-input" [(ngModel)]="userData.password"
-                            placeholder="พิมพ์เพื่อเปลี่ยนรหัสผ่าน">
+                    <div class="profile-form">
+                        <div class="form-group">
+                            <label class="form-label">รหัสผ่านใหม่ (ปล่อยว่างถ้าไม่เปลี่ยน)</label>
+                            <input type="password" class="form-input" [(ngModel)]="newPassword"
+                                placeholder="พิมพ์รหัสผ่านใหม่">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">ยืนยันรหัสผ่านใหม่</label>
+                            <input type="password" class="form-input" [(ngModel)]="confirmPassword"
+                                placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง">
+                        </div>
                     </div>
                 </div>
 

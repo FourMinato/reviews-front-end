@@ -74,32 +74,24 @@ export class ReviewAllPostsComponent {
         break;
     }
   }
+  // สร้างฟังก์ชันกลางเพื่อจัดการข้อมูล Review
+  private transformReviewData(res: any) {
+    if (res.status === true) {
+      this.reviews = res.result.map((review: any) => ({
+        ...review,
+        profile: this.authService.getProfileImageUrl(review.profile, review.is_anonymous),
+        is_saved: !!review.is_saved // แปลง 1/0 เป็น true/false สั้นๆ
+      }));
+    }
+  }
   getReviewByDate() {
     this.http.get<any>(`${this.constants.API}/review/review/date/${this.subjectID}/${this.userID}`)
-      .subscribe(res => {
-        if (res.status === true) {
-          this.reviews = res.result.map((review: any) => ({
-            ...review,
-            // โยนชื่อไฟล์ และสถานะไม่ระบุตัวตนไปให้ Service จัดการ
-            profile: this.authService.getProfileImageUrl(review.profile, review.is_anonymous),
-            is_saved: (review.is_saved === 1 || review.is_saved === true)
-          }));
-        }
-      });
+      .subscribe(res => this.transformReviewData(res));
   }
 
   getReviewByLike() {
     this.http.get<any>(`${this.constants.API}/review/review/like/${this.subjectID}/${this.userID}`)
-      .subscribe(res => {
-        if (res.status === true) {
-          this.reviews = res.result.map((review: any) => ({
-            ...review,
-            // โยนชื่อไฟล์ และสถานะไม่ระบุตัวตนไปให้ Service จัดการ
-            profile: this.authService.getProfileImageUrl(review.profile, review.is_anonymous),
-            is_saved: (review.is_saved === 1 || review.is_saved === true)
-          }));
-        }
-      });
+      .subscribe(res => this.transformReviewData(res));
   }
   edtitReview(reviewID: number) {
     this.router.navigate(['/edit/review'], {
@@ -201,7 +193,7 @@ export class ReviewAllPostsComponent {
             }
           });
       }
-      });
+    });
 
   }
   deleteThisReview(reviewID: number) {
@@ -349,7 +341,7 @@ export class ReviewAllPostsComponent {
 
   }
   adminDeleteThisReview(reviewID: number) {
-     Swal.fire({
+    Swal.fire({
       html: '<div style="font-size: 1.5rem; font-family: \'Kanit\', \'Prompt\', \'Mitr\', \'Noto Sans Thai\', sans-serif;">ยืนยันการลบโพสต์นี้?</div>',
       icon: 'warning',
       confirmButtonText: '<div style="font-size:1.2rem; font-family: \'Kanit\', \'Prompt\', \'Mitr\', \'Noto Sans Thai\', sans-serif;">ตกลง</div>',

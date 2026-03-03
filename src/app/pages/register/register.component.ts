@@ -32,18 +32,53 @@ export class RegisterComponent {
 
   }
   register() {
-  if (!this.name.trim() || !this.email.trim() || !this.password.trim() || !this.confirmPassword.trim()) {
-    this.showError('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
-  if (this.password !== this.confirmPassword) {
-    this.showError('รหัสผ่านไม่ตรงกัน');
-    return;
-  }
-  if (!this.captchaToken) {
-    this.showRequireCaptcha();
-    return;
-  }
+    // 1. ตรวจสอบชื่อผู้ใช้
+    if (!this.name.trim()) {
+      this.showError('กรุณาใส่ชื่อผู้ใช้');
+      return;
+    }
+
+    // 2. ตรวจสอบอีเมล
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+    if (!this.email.trim()) {
+      this.showError('กรุณาใส่อีเมล');
+      return;
+    } else if (!emailPattern.test(this.email)) {
+      this.showError('กรุณาใส่อีเมลที่ใช้ได้');
+      return;
+    }
+
+    // 3. ตรวจสอบรหัสผ่าน
+    if (!this.password.trim()) {
+      this.showError('กรุณาใส่รหัสผ่าน');
+      return;
+    }
+
+    // 4. ตรวจสอบความยาวรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)
+    if (this.password.length < 6) {
+      this.showError('กรุณาใส่รหัสผ่านให้มีความยาวอย่างน้อย 6 ตัวอักษร');
+      return;
+    }
+
+    // 5. ตรวจสอบการยืนยันรหัสผ่าน
+    if (!this.confirmPassword.trim()) {
+      this.showError('กรุณายืนยันรหัสผ่าน');
+      return;
+    }
+
+    // 6. ตรวจสอบรหัสผ่านให้ตรงกัน
+    if (this.password !== this.confirmPassword) {
+      this.showError('รหัสผ่านยืนยันไม่ตรงกับรหัสผ่าน');
+      return;
+    }
+
+    // 7. ตรวจสอบ reCAPTCHA
+    if (!this.captchaToken) {
+      this.showRequireCaptcha();
+      return;
+    }
+
+    // --- ส่วนประมวลผลข้อมูล (Logic เดิมของคุณ) ---
     let anonymousName = this.name;
     if (this.name.length > 2) {
       anonymousName = this.name[0] + '*'.repeat(this.name.length - 2) + this.name[this.name.length - 1];
@@ -60,25 +95,28 @@ export class RegisterComponent {
       type: 1
     };
 
-  this.http.post(`${this.constants.API}/user/register`, userData)
-    .subscribe({
-      next: (response: any) => {
-        if (response.status === false) {
-          this.showError(response.message || 'สมัครสมาชิกไม่สำเร็จ');
-          return;
+    // ส่งข้อมูลไปยัง Backend
+    this.http.post(`${this.constants.API}/user/register`, userData)
+      .subscribe({
+        next: (response: any) => {
+          if (response.status === false) {
+            this.showError(response.message || 'สมัครสมาชิกไม่สำเร็จ');
+            return;
+          }
+          this.showSuccess(response.message || 'สมัครสมาชิกสำเร็จ')
+            .then(() => {
+              if (typeof grecaptcha !== 'undefined') {
+                grecaptcha.reset();
+              }
+              this.loadRecaptcha();
+              this.router.navigate(['/login']);
+            });
+        },
+        error: (err) => {
+          this.showError(err.error?.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์');
         }
-        this.showSuccess(response.message || 'สมัครสมาชิกสำเร็จ')
-          .then(() => {
-            grecaptcha.reset();
-            this.loadRecaptcha();
-            this.router.navigate(['/login']);
-          });
-      },
-      error: (err) => {
-        this.showError(err.error?.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์');
-      }
-    });
-}
+      });
+  }
   ngAfterViewInit() {
     this.loadRecaptcha();
   }

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../../service/user';
@@ -9,22 +9,22 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-self',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './self.component.html',
   styleUrls: ['./self.component.scss']
 })
 export class SelfComponent implements OnInit {
   currentTab: string = 'reviews';
   userID: string | number = '';
+  newPassword: string = '';
+  confirmPassword: string = '';
 
-  // ใช้ค่า apiUrl จาก environment ที่คุณประกาศไว้
   private readonly API_URL = `${environment.apiUrl}/user`;
 
   userData = {
     name: '',
     email: '',
-    password: '',
-    image: `${environment.apiUrl}/uploads/1e346a4b-7fb4-4f94-929d-9093df91ce85.jpg`
+    image: `${environment.apiUrl}/uploads/default-profile.png`
   };
 
   myReviews: any[] = [];
@@ -44,94 +44,166 @@ export class SelfComponent implements OnInit {
     }
   }
 
+  // 1. โหลดข้อมูลผู้ใช้จาก Database
   loadUserProfile(uid: any) {
-  this.http.get<any>(`${environment.apiUrl}/user/getuser/${uid}`).subscribe({
-    next: (res) => {
-      if (res.status && res.data.length > 0) {
-        const user = res.data[0];
-        this.userData.name = user.name;
-        this.userData.email = user.email;
-        this.userData.image = this.authService.getProfileImageUrl(user.profile);
+    this.http.get<any>(`${environment.apiUrl}/user/getuser/${uid}`).subscribe({
+      next: (res) => {
+        if (res.status && res.data.length > 0) {
+          const user = res.data[0];
+          this.userData.name = user.name;
+          this.userData.email = user.email;
+
+          // --- แก้ไขจุดนี้เพื่อรองรับ Supabase ---
+          if (user.profile && user.profile.includes('supabase.co')) {
+            // ถ้าเป็น URL จาก Supabase ให้ใช้ค่านนั้นตรงๆ
+            this.userData.image = user.profile;
+          } else if (user.profile === 'default-profile.png' || !user.profile) {
+            this.userData.image = `${environment.apiUrl}/uploads/default-profile.png`;
+          } else {
+            // รองรับรูปเก่าที่อาจจะยังค้างอยู่ในเครื่อง
+            this.userData.image = `${environment.apiUrl}/uploads/user-profile/${user.profile}`;
+          }
+
+          this.authService.setUser(user);
+        }
       }
-    }
-  });
-}
-
-  loadMyActivity(uid: any) {
-    // 1. ดึงรีวิวแบบเดิม: /user/getuser/review/:uid
-    this.http.get<any>(`${this.API_URL}/getuser/review/${uid}`).subscribe(res => {
-      if (res.status) this.myReviews = res.data;
-    });
-
-    // 2. ดึงคำถามแบบเดิม: /user/getuser/question/:uid
-    this.http.get<any>(`${this.API_URL}/getuser/question/${uid}`).subscribe(res => {
-      if (res.status) this.myQuestions = res.data;
     });
   }
 
+  // 2. บันทึกการเปลี่ยนแปลงโปรไฟล์
   saveProfile() {
-    // 1. ดึงข้อมูล user ปัจจุบันจาก Service
-    const user = this.authService.getUser();
+    const currentUser = this.authService.getUser() as any;
 
-    // 2. ตรวจสอบว่าเข้าสู่ระบบอยู่หรือไม่
-    if (!user || !user.uid) {
-      Swal.fire('กรุณาเข้าสู่ระบบ', 'ไม่พบข้อมูลผู้ใช้งาน', 'warning');
+    if (!currentUser || !currentUser.uid) {
+      this.showError('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
       return;
     }
 
-    // 3. ส่งข้อมูลไปอัปเดตที่ API (ใช้ Path /user/update-user/:uid)
-    this.http.put(`${this.API_URL}/update-user/${user.uid}`, this.userData).subscribe({
+    // --- Validation Section ---
+
+    // ตรวจสอบชื่อ
+    if (!this.userData.name || !this.userData.name.trim()) {
+      this.showError('กรุณาป้อนชื่อผู้ใช้');
+      return;
+    }
+
+    // ตรวจสอบรหัสผ่าน (ถ้ามีการพิมพ์ช่องใดช่องหนึ่ง)
+    if (this.newPassword.trim() || this.confirmPassword.trim()) {
+      if (this.newPassword.trim() && !this.confirmPassword.trim()) {
+        this.showError('โปรดยืนยันรหัสผ่าน');
+        return;
+      }
+      if (!this.newPassword.trim() && this.confirmPassword.trim()) {
+        this.showError('กรุณาป้อนรหัสผ่านใหม่');
+        return;
+      }
+      if (this.newPassword !== this.confirmPassword) {
+        this.showError('รหัสผ่านยืนยันไม่ตรงกับรหัสผ่านใหม่');
+        return;
+      }
+      if (this.newPassword.length < 6) {
+        this.showError('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+        return;
+      }
+    }
+
+    // --- Data Preparation ---
+    const updateData = {
+      name: this.userData.name.trim(),
+      email: this.userData.email,
+      password: this.newPassword.trim() || null,
+      anonymous_name: this.generateAnonymousName(this.userData.name.trim()),
+      // ตรวจสอบว่าใช้ URL ปัจจุบันที่แสดงอยู่บนหน้าจอ (ซึ่งเป็น URL ของ Supabase)
+      profile: this.userData.image
+    };
+
+    this.http.put(`${this.API_URL}/update-user/${currentUser.uid}`, updateData).subscribe({
       next: (res: any) => {
         if (res.status) {
-          // แสดงผลสำเร็จด้วย SweetAlert2
-          Swal.fire({
-            title: 'สำเร็จ!',
-            text: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
-            icon: 'success',
-            confirmButtonText: 'ตกลง',
-            confirmButtonColor: '#000'
+          this.showSuccess('แก้ไขข้อมูลสำเร็จ');
+
+          // อัปเดตข้อมูลใน LocalStorage ให้เป็นค่าล่าสุดรวมถึงรูปด้วย
+          this.authService.setUser({
+            ...currentUser,
+            name: this.userData.name.trim(),
+            profile: this.userData.image // อัปเดต URL รูปใน Storage ด้วย
           });
 
-          // อัปเดตข้อมูลใหม่ลงใน LocalStorage ผ่าน Service
-          this.authService.setUser({ ...user, name: this.userData.name });
-        } else {
-          Swal.fire('ผิดพลาด', res.message || 'ไม่สามารถแก้ไขข้อมูลได้', 'error');
+          this.newPassword = '';
+          this.confirmPassword = '';
+          this.loadUserProfile(currentUser.uid);
         }
-      },
-      error: (err) => {
-        console.error('Update Error:', err);
-        Swal.fire('ผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
       }
     });
   }
 
+  // 3. จัดการการอัปโหลดรูปภาพ
   onFileSelected(event: any) {
     const file: File = event.target.files[0];
     if (file) {
       const formData = new FormData();
-      // ส่งชื่อฟิลด์เป็น 'profileImage' ให้ตรงกับ API ตัวใหม่ฝั่งหลังบ้าน
-      formData.append('profileImage', file); 
+      formData.append('profileImage', file);
 
+      // ยิงไปที่ API images ที่เราแก้เป็น Supabase แล้ว
       this.http.post(`${environment.apiUrl}/images/upload-profile/${this.userID}`, formData).subscribe({
         next: (res: any) => {
           if (res.status) {
-            // รีเฟรชรูปหน้าจอโดยชี้ไปที่โฟลเดอร์ user-profile
-            this.userData.image = `${environment.apiUrl}/images/user-profile/${res.fileName}`;
-            Swal.fire('สำเร็จ', 'เปลี่ยนรูปโปรไฟล์เรียบร้อย', 'success');
+            // --- แก้ไขจุดนี้: res.fileName ตอนนี้คือ Full URL จาก Supabase ---
+            this.userData.image = res.fileName;
+
+            const user = this.authService.getUser();
+            this.authService.setUser({ ...user, profile: res.fileName });
+            this.showSuccess('เปลี่ยนรูปโปรไฟล์เรียบร้อย');
+          } else {
+            this.showError('อัปโหลดไม่สำเร็จ');
           }
         },
         error: (err) => {
-          console.error('Upload Error:', err);
-          Swal.fire('ผิดพลาด', 'ไม่สามารถอัปโหลดรูปภาพได้', 'error');
+          this.showError('เกิดข้อผิดพลาดในการอัปโหลด');
         }
       });
     }
   }
 
+  // --- Helper Functions ---
 
+  loadMyActivity(uid: any) {
+    this.http.get<any>(`${this.API_URL}/getuser/review/${uid}`).subscribe(res => {
+      if (res.status) this.myReviews = res.data;
+    });
+
+    this.http.get<any>(`${this.API_URL}/getuser/question/${uid}`).subscribe(res => {
+      if (res.status) this.myQuestions = res.data;
+    });
+  }
+
+  private generateAnonymousName(name: string): string {
+    if (name.length > 2) {
+      return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+    } else if (name.length === 2) {
+      return name[0] + '*';
+    }
+    return name;
+  }
+
+  private showError(message: string) {
+    Swal.fire({
+      html: `<div style="font-size: 1.5rem; font-family: 'Kanit', sans-serif;">${message}</div>`,
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#000'
+    });
+  }
+
+  private showSuccess(message: string) {
+    Swal.fire({
+      html: `<div style="font-size: 1.5rem; font-family: 'Kanit', sans-serif;">${message}</div>`,
+      icon: 'success',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#28D16F'
+    });
+  }
 
   tab(name: string) { this.currentTab = name; }
   back() { window.history.back(); }
-
-
 }
